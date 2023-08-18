@@ -52,22 +52,6 @@ void loop() {
 //  Serial.print(calibration_factor);
 //  Serial.println();
 
- 
-  
-  digitalWrite(CH1_pingPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(CH1_pingPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(CH1_pingPin, LOW);
- 
-  duration = pulseIn(CH1_echoPin, HIGH);
-  mm = microsecondsToMilimeters(duration);
-  Serial.print("V=");
-  Serial.print(mm);
-  Serial.print(" mm :");
-//  Serial.println();
-  delay(1);
-
   digitalWrite(CH2_pingPin, LOW);
   delayMicroseconds(2);
   digitalWrite(CH2_pingPin, HIGH);
@@ -76,9 +60,27 @@ void loop() {
  
   duration = pulseIn(CH2_echoPin, HIGH);
   mm = microsecondsToMilimeters(duration);
+  Serial.print("V=");
+  Serial.print(mm);
+  Serial.print(" mm :");
+ 
+  
+//  Serial.println();
+  delay(1);
+
+
+  digitalWrite(CH1_pingPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(CH1_pingPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(CH1_pingPin, LOW);
+ 
+  duration = pulseIn(CH1_echoPin, HIGH);
+  mm = microsecondsToMilimeters(duration);
   Serial.print("D=");
   Serial.print(mm);
-  Serial.print(" mm");
+   Serial.print(" mm");
+
 
   Serial.println();
   delay(1);
