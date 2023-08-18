@@ -8,8 +8,8 @@ volume_offset = 2.0  # Adjust this based on your data
 volume_cold = 1.1349 #
 
 # Define volume threshold values
-volume_min_threshold = 50.0
-volume_max_threshold = 400.0
+volume_min_threshold = 140.0
+volume_max_threshold = 280.0
 
 # Define color thresholds for D value
 d_threshold = 120.0
@@ -44,9 +44,10 @@ with open('pv_data.txt', 'r') as file:
                 # Filter volume outliers
                 if volume_value < volume_min_threshold or volume_value > volume_max_threshold:
                     if last_valid_volume is None:
-                        volume_value = 0.0
+                        volume_value = (volume_offset + volume_cold) / -volume_scale
                     else:
-                        volume_value = last_valid_volume
+                        volume_value = (volume_offset + volume_cold) / -volume_scale
+                        #volume_value = last_valid_volume
 
                 last_valid_volume = volume_value
                 pressure_value = pressure_value * pressure_scale + pressure_offset
