@@ -8,11 +8,11 @@ volume_offset = 2.0  # Adjust this based on your data
 volume_cold = 1.1349 #
 
 # Define volume threshold values
-volume_min_threshold = 140.0
-volume_max_threshold = 280.0
+volume_min_threshold = 50.0
+volume_max_threshold = 400.0
 
 # Define color thresholds for D value
-d_threshold = 120.0
+d_threshold = 100.0
 
 # Read data from the text file
 pressure = []
