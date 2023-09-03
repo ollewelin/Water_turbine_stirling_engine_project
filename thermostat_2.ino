@@ -43,6 +43,7 @@
 
 
 const int NTC_pin = A0; // Analog pin for NTC temperature sensor
+const int HEATER_RELAY_PIN = 13;
 
 const int numPoints = 32; // Number of data points in the table
 
@@ -89,19 +90,41 @@ generic_pid_controller controller; // Global controller instance
 
 unsigned long previousMillis = 0;
 const unsigned long interval = 100; // Interval in milliseconds (1 second)
-
+const unsigned long RELAY_DUTY_TIME_SEC = 5;
+const unsigned long RELAY_PWM_DUTY_TIME = RELAY_DUTY_TIME_SEC*1000/interval;//duty time in seconds = interval * 0.001 * RELAY_PWM_DUTY_TIME 
+unsigned long RELAY_PWM_timer = 0;
+const float MAX_DUTY_PWM_CVU = 0.50;//
+const float integrator_time = 600.0;//Seconds
+const float integrator_antiwindup_filter_time = 1.0;//Seconds
+const float derivate_filter_time = 1.0;//Seconds
 
 
 void setup() {
     // Initialize controller parameters and sample_time here
-    controller.PID_par_p = 1.0; // Example value
-    controller.PID_par_i = 0.1; // Example value
-    controller.PID_par_d = 0.01; // Example value
-    controller.sample_time = 0.1; // Example value
+    
+    controller.PID_par_p = 0.1; // Example value
+   
+    controller.PID_par_d = 0.0; // Example value
+    controller.sample_time = (float)1000 / (float)interval; // 
+    controller.PID_par_i = do_filter_constant(controller.sample_time, integrator_time);
+    controller.PID_par_tau_i = do_filter_constant(controller.sample_time, integrator_antiwindup_filter_time);
+    controller.PID_par_tau_d = do_filter_constant(controller.sample_time, derivate_filter_time);
+    controller.PID_par_cvu = ((float)RELAY_PWM_DUTY_TIME)*MAX_DUTY_PWM_CVU;
+    controller.PID_par_cvl = 0.0f;
+    controller.cont_mode = CONTROLLER_MODE_RESET_PID;
+    controller.cont_mode = CONTROLLER_MODE_RUN_PID;
+    pinMode(HEATER_RELAY_PIN, OUTPUT);
     Serial.begin(115200);
+      Serial.print("controller.PID_par_tau_i = ");
+      Serial.print(controller.PID_par_tau_i, 2);
+    controller.PID_setp = 175.0f;
+    Serial.print("controller.PID_setp = ");
+    Serial.print(controller.PID_setp, 2);
+    Serial.println(" °C");
+
 }
 
-
+  unsigned long free_time = 0;
 void loop() {
     unsigned long currentMillis = millis();
     if (currentMillis - previousMillis >= interval) {
@@ -119,29 +142,51 @@ void loop() {
 
   // Convert resistance to temperature in Celsius
   float ntcTemperature = calculateNTCTemperature(ntcResistance);
+  ntcTemperature = limit_temp(ntcTemperature);
   Serial.print("T=");
   Serial.print(ntcTemperature, 2);
   Serial.println(" °C");
-  controller.cont_mode = CONTROLLER_MODE_RUN_PID;
+  
           
- // Serial.print("controller.sample_time = ");
- // Serial.println(controller.sample_time, 4);
-
+        controller.PID_fb = ntcTemperature;
         run1sample();
 
-        // Access controller outputs as needed
-        float d_filt_fb = get_d_filt_fb();
-        float antiwindup_filt = get_antiwindup_filt();
-        float d_part = get_d_part();
-        float i_part = get_i_part();
-        float p_part = get_p_part();
-        float integrator = get_integrator();
+      Serial.print("controller.PID_error = ");
+      Serial.print(controller.PID_error, 2);
 
-        // Your application logic here
+      Serial.print("controller.PID_control_value = ");
+      Serial.print(controller.PID_control_value, 2);
+      Serial.print(" controller.integrator = ");
+      Serial.println(controller.integrator, 2);
 
-        
+      
+    
+    
+    if(free_time < 5000)
+    {
+      Serial.print(" Warning CPU time resorces low free_time = ");
+      Serial.println(free_time);
     }
-
+      if(RELAY_PWM_timer < RELAY_PWM_DUTY_TIME)
+      {
+        RELAY_PWM_timer++;
+      }
+      else
+      {
+        RELAY_PWM_timer = 0;
+      }
+      if(RELAY_PWM_timer < (unsigned long)controller.PID_control_value)
+      {
+        digitalWrite(HEATER_RELAY_PIN, HIGH);
+      }
+      else
+      {
+        digitalWrite(HEATER_RELAY_PIN, LOW);
+      }
+     free_time = 0;   
+    }
+    
+    free_time++;//Just for logging
     // Other non-blocking tasks or code can run here
 }
 
@@ -197,29 +242,6 @@ void run1sample() {
 }
 
 
-float get_d_filt_fb() {
-    return controller.filtered_feedback;
-}
-
-float get_antiwindup_filt() {
-    return controller.antiwindup_filter;
-}
-
-float get_d_part() {
-    return controller.d_part;
-}
-
-float get_i_part() {
-    return controller.i_part;
-}
-
-float get_p_part() {
-    return controller.p_part;
-}
-
-float get_integrator() {
-    return controller.integrator;
-}
 
 float check_and_clear_NaN(float arg1) {
     if (isnan(arg1)) {
@@ -272,7 +294,19 @@ float calculateNTCTemperature(float resistance) {
     float temperatureRange = temperatureTable[i + 1] - temperatureTable[i];
     float resistanceRange = resistanceTable[i + 1]*1000 - resistanceTable[i]*1000;
     float slope = temperatureRange / resistanceRange;
-
     return temperatureTable[i] + slope * (resistance - resistanceTable[i]*1000);
   }
+}
+
+float limit_temp(float temp)
+{
+    if(temp > 500.0f)
+    {
+      temp = 500.0f;
+    }
+    if(temp < -100.0f)
+    {
+      temp = -100.0f;
+    }
+    return temp;
 }
